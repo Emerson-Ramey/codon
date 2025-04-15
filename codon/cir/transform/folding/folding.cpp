@@ -4,6 +4,7 @@
 
 #include "codon/cir/transform/folding/const_fold.h"
 #include "codon/cir/transform/folding/const_prop.h"
+#include "codon/cir/transform/folding/copy_prop.h"
 
 namespace codon {
 namespace ir {
@@ -30,6 +31,7 @@ FoldingPassGroup::FoldingPassGroup(const std::string &sideEffectsPass,
 
   if (runGlobalDemotion)
     push_back(std::move(gdUnique));
+  push_back(std::make_unique<CopyPropPass>(reachingDefPass, globalVarPass));
   push_back(std::make_unique<ConstPropPass>(reachingDefPass, globalVarPass));
   push_back(std::move(canonUnique));
   push_back(std::move(fpUnique));
