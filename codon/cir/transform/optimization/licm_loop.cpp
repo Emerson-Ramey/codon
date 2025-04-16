@@ -1,6 +1,6 @@
 // Copyright (C) 2022-2025 Exaloop Inc. <https://exaloop.io>
 
-#include "licm.h"
+#include "licm_loop.h"
 
 #include <queue>
 #include <unordered_map>
