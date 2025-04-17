@@ -246,6 +246,7 @@ set(CODON_HPPFILES
     codon/cir/transform/cleanup/replacer.h
     codon/cir/transform/folding/const_fold.h
     codon/cir/transform/folding/const_prop.h
+    codon/cir/transform/folding/copy_prop.h
     codon/cir/transform/folding/folding.h
     codon/cir/transform/folding/rule.h
     codon/cir/transform/lowering/imperative.h
@@ -260,6 +261,7 @@ set(CODON_HPPFILES
     codon/cir/transform/pythonic/io.h
     codon/cir/transform/pythonic/list.h
     codon/cir/transform/pythonic/str.h
+    codon/cir/transform/optimizations/licm_operator.h
     codon/cir/transform/rewrite.h
     codon/cir/types/types.h
     codon/cir/util/cloning.h
@@ -358,6 +360,7 @@ set(CODON_CPPFILES
     codon/cir/transform/cleanup/replacer.cpp
     codon/cir/transform/folding/const_fold.cpp
     codon/cir/transform/folding/const_prop.cpp
+    codon/cir/transform/folding/copy_prop.cpp
     codon/cir/transform/folding/folding.cpp
     codon/cir/transform/lowering/imperative.cpp
     codon/cir/transform/lowering/pipeline.cpp
@@ -373,6 +376,7 @@ set(CODON_CPPFILES
     codon/cir/transform/pythonic/io.cpp
     codon/cir/transform/pythonic/list.cpp
     codon/cir/transform/pythonic/str.cpp
+    codon/cir/transform/optimizations/licm_operator.cpp
     codon/cir/types/types.cpp
     codon/cir/util/cloning.cpp
     codon/cir/util/format.cpp

@@ -5,7 +5,6 @@
 
 #include "codon/cir/transform/pass.h"
 #include "codon/cir/analyze/module/side_effect.h"
-#include "codon/cir/analyze/dataflow/dominator.h"
 
 namespace codon {
 namespace ir {
@@ -16,25 +15,21 @@ namespace optimizations {
 /// that don't change across iterations and hoists them to the loop preheader.
 class LICMPass : public OperatorPass {
     private:
-        std::string dominatorKey;
         std::string sideEffectsKey;
-        std::string reachingDefsKey;
 
     public:
         /// Constructs a licm pass.
-        /// @param dominatorKey the dominator analysis key
         /// @param sideEffectsKey the dominator analysis key
-        /// @param reachingDefsKey the reaching definitions analysis key
-        LICMPass(const std::string &dominatorKey, const std::string &sideEffectsKey, const std::string &reachingDefsKey, const std::string &cfAnalysisKey)
-            : OperatorPass(/*childrenFirst=*/true), dominatorKey(dominatorKey), sideEffectsKey(sideEffectsKey), reachingDefsKey(reachingDefsKey) {} // children first = true is good for processing nested loops before their parent loops
+        LICMPass(const std::string &sideEffectsKey)
+            : OperatorPass(/*childrenFirst=*/true), sideEffectsKey(sideEffectsKey) {} // children first = true is good for processing nested loops before their parent loops
 
         static const std::string KEY;
         std::string getKey() const override { return KEY; }
 
         void run(Module *m) override;
-        void handle(ForFlow *v) override;
+        // void handle(ForFlow *v) override;
         void handle(ImperativeForFlow *v) override;
-        void handle(WhileFlow *v) override;
+        // void handle(WhileFlow *v) override;
     
     private:
         /// Performs the actual code motion for a loop
@@ -42,7 +37,7 @@ class LICMPass : public OperatorPass {
         /// @param body the loop's body
         /// @param parent the loop's parent
         template <typename T>
-        void performCodeMotion(T *loop, SeriesFlow *body, SeriesFlow *parent);
+        bool performCodeMotion(T *loop, SeriesFlow *body, SeriesFlow *parent);
 
         /// Analyzes whether an expression is loop-invariant
         /// @param expr the expression to check
@@ -57,10 +52,10 @@ class LICMPass : public OperatorPass {
         template <typename T>
         std::unordered_set<Var *> collectModifiedVars(T *loop);
         
-        /// Identifies variables used in an expression
-        /// @param expr the expression to analyze
-        /// @return vector of used variables
-        std::vector<Var *> getUsedVars(Value *expr);       
+        // /// Identifies variables used in an expression
+        // /// @param expr the expression to analyze
+        // /// @return vector of used variables
+        // std::vector<Var *> getUsedVars(Value *expr);       
     };
 
 } // namespace optimizations

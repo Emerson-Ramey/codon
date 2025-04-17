@@ -205,6 +205,10 @@ void PassManager::registerStandardPasses(PassManager::Init init) {
     registerPass(std::make_unique<parallel::OpenMPPass>(), /*insertBefore=*/"", {},
                  {cfgKey, globalKey});
 
+    // optimizations
+    registerPass(std::make_unique<optimizations::LICMPass>(seKey1), 
+                /*insertBefore=*/"", {seKey1}, {seKey1, rdKey, cfgKey, globalKey, capKey}); // {requires}, {invalidates}
+
     if (init != Init::JIT) {
       // Don't demote globals in JIT mode, since they might be used later
       // by another user input.

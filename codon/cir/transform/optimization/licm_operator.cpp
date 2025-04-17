@@ -4,11 +4,12 @@
 #include <vector>
 #include <iterator>
 #include <utility>
+#include <iostream>
 
 #include "codon/cir/analyze/module/side_effect.h"
-#include "codon/cir/analyze/dataflow/dominator.h"
 #include "codon/cir/util/visitor.h"
 #include "codon/cir/util/iterators.h"
+#include "codon/cir/util/cloning.h"
 
 
 namespace codon {
@@ -23,77 +24,106 @@ void LICMPass::run(Module *m) {
 }
 
 
-// HANDLE functions for different flow types
-void LICMPass::handle(ForFlow *v) {
-  auto *body = cast<SeriesFlow>(v->getBody());
-  if (!body) {
-    return;
-  }
+// // HANDLE functions for different flow types
+// void LICMPass::handle(ForFlow *v) {
+//   auto *M = v->getModule();
+//   std::cout << "LICM for flow " << *v << "\n";
+//   auto *body = cast<SeriesFlow>(v->getBody());
+//   if (!body) {
+//     return;
+//   }
   
-  // create preheader
-  auto *parent = M->N<SeriesFlow>(v->getSrcInfo());
+//   // create preheader
+//   auto *parent = M->N<SeriesFlow>(v);
 
-  performCodeMotion(v, body, parent);
-  // add back original loop with expression removed
-  parent->push_back(v)
-  // replace the original loop with new "preheader + (original loop - exprs)" series
-  v->replaceAll(parent)
-}
+//   if (performCodeMotion(v, body, parent)) {
+//     std::cout << "performCodeMotion done" << "\n";
+//     parent->push_back(v);
+//     std::cout << "pushed back loop to new series" << "\n";
+//     v->replaceAll(parent);  // replace the original loop with new "preheader + (original loop - exprs)" series
+//     std::cout << "replaced all" << "\n";  
+//   }
+  
+  
+// }
+// void LICMPass::handle(WhileFlow *v) {
+//   auto *M = v->getModule();
+//   std::cout << "LICM while flow " << v << "\n";
+//   auto *body = cast<SeriesFlow>(v->getBody());
+//   if (!body) {
+//     return;
+//   }
+  
+//   // create preheader
+//   auto *parent = M->N<SeriesFlow>(v);
+
+//   performCodeMotion(v, body, parent);
+//   std::cout << "performCodeMotion done" << "\n";
+//   parent->push_back(v);
+//   std::cout << "pushed back loop to new series" << "\n";
+//   v->replaceAll(parent);
+//   std::cout << "replace all" << "\n";
+// }
 
 void LICMPass::handle(ImperativeForFlow *v) {
+  auto *M = v->getModule();
+  util::CloneVisitor cv(M);
+
+  std::cout << "LICM imperative for flow " << *v << "\n";
   auto *body = cast<SeriesFlow>(v->getBody());
   if (!body) {
     return;
   }
   
   // create preheader
-  auto *parent = M->N<SeriesFlow>(v->getSrcInfo());
+  auto *parent = M->N<SeriesFlow>(v);
 
-  performCodeMotion(v, body, parent);
-  parent->push_back(v)
-  v->replaceAll(parent)
-}
-
-void LICMPass::handle(WhileFlow *v) {
-  auto *body = cast<SeriesFlow>(v->getBody());
-  if (!body) {
-    return;
+  if (performCodeMotion(v, body, parent)) {
+    std::cout << "performCodeMotion done" << "\n";
+    parent->push_back(cv.clone(v));
+    std::cout << "pushed back loop to new series" << "\n";
+    v->replaceAll(parent);
+    std::cout << "replaced all" << *v << "\n";  
   }
-  
-  // create preheader
-  auto *parent = M->N<SeriesFlow>(v->getSrcInfo());
-
-  performCodeMotion(v, body, parent);
-  parent->push_back(v)
-  v->replaceAll(parent)
 }
 
 // HELPER FUNCTIONS
 template <typename T>
-void LICMPass::performCodeMotion(T *loop, SeriesFlow *body, SeriesFlow *parent) {  
+bool LICMPass::performCodeMotion(T *loop, SeriesFlow *body, SeriesFlow *parent) {  
+  std::cout << "LICM perform code motion "<< "\n";
   // Identify invariant expressions
   std::vector<Value *> invariantExprs;
   for (auto it = body->begin(); it != body->end(); ) {
     Value *expr = *it;
+    std::cout << "EXPRESSION (" << *(expr->getType()) << ") " << *expr << "\n";
     
     if (isLoopInvariant(expr, loop)) {
       // Found an invariant expression
       invariantExprs.push_back(expr);
+      std::cout << "pushed back invariant expr" << "\n";
       // Remove it from the loop body
       it = body->erase(it);
+      std::cout << "erased invariant expr" << "\n";
     } else {
       ++it;
     }
   }
-  
+  std::cout << "loop through body done" << "\n";
   // Insert invariant expressions before the loop
+  bool invariant_exists = false;
   for (auto *expr : invariantExprs) {
-    parent->push_back(expr);
+    // parent->push_back(expr);
+    invariant_exists = true;
+    parent->insert(parent->begin(), expr);
+    std::cout << "inserted " << *expr << "\n";
   }
+  std::cout << "done done with all " << "\n";
+  return invariant_exists;
 }
 
 template <typename T>
 bool LICMPass::isLoopInvariant(Value *expr, T *loop) {
+  std::cout << "LICM isLoopInvariant " << "\n";
   // Check if expression has side effects
   auto *sideEffects = getAnalysisResult<analyze::module::SideEffectResult>(sideEffectsKey);
   if (auto *call = cast<CallInstr>(expr)) {
@@ -102,12 +132,12 @@ bool LICMPass::isLoopInvariant(Value *expr, T *loop) {
   }
 
   // Check for memory instructions
-  if (isa<AssignInstr>(expr) || isa<ExtractInstr>(expr) || isa<StackAllocInstr>(expr) || isa<InsertInstr>(expr)) {
+  if (isA<ExtractInstr>(expr) || isA<StackAllocInstr>(expr) || isA<InsertInstr>(expr)) {
     return false;
   }
 
   // Check for control flow instructions
-  if (isa<BranchInstr>(expr) || isa<ReturnInstr>(expr) || isa<YieldInstr>(expr)|| isa<YieldInstr>(ThrowInstr)) {
+  if (isA<ControlFlowInstr>(expr) || isA<ReturnInstr>(expr) || isA<YieldInstr>(expr)|| isA<YieldInInstr>(expr) || isA<BreakInstr>(expr) || isA<ContinueInstr>(expr) || isA<ThrowInstr>(expr)) {
     return false;
   }
 
@@ -115,17 +145,20 @@ bool LICMPass::isLoopInvariant(Value *expr, T *loop) {
   auto loopModifiedVars = collectModifiedVars(loop);
   
   // Check if expression uses any variables modified in the loop
-  for (auto *var : getUsedVars(expr)) {
+  std::cout << "check if uses variables modified" << "\n";
+  for (auto *var : expr->getUsedVariables()) {
+    std::cout << *var << "\n";
     if (loopModifiedVars.count(var) > 0)
       return false;
   }
-
+  std::cout << "LICM found invariant expression" << "\n";
   // If we reach here, expression is invariant
   return true;
 }
 
 template <typename T>
 std::unordered_set<Var *> LICMPass::collectModifiedVars(T *loop) {
+  std::cout << "LICM starting collectModifiedVars" << "\n";
   std::unordered_set<Var *> modified;
   
   class ModifiedVarsVisitor : public util::Visitor {
@@ -135,45 +168,47 @@ std::unordered_set<Var *> LICMPass::collectModifiedVars(T *loop) {
   public: 
     ModifiedVarsVisitor(std::unordered_set<Var *> &vars) : vars(vars) {}
     
-    void visit(AssignInstr *v) override {
-      if (auto *var = cast<Var>(v->getLhs()))
-        vars.insert(var);
+    void visit(Value *v) override {
+      if (auto *assign = cast<AssignInstr>(v)) {
+        if (auto *var = cast<Var>(assign->getLhs())) {
+          vars.insert(var);
+          std::cout << *var << "\n";
+        }
+      }
     }
         
     // Add other operations that might modify variables
   };
   
   ModifiedVarsVisitor visitor(modified);
-  visitor.process(loop);
-  
+  visitor.visit(loop);
+  std::cout << "done collectModifiedVars" << "\n";
   return modified;
 }
 
-std::vector<Var *> LICMPass::getUsedVars(Value *expr) {
-  std::vector<Var *> used;
+// std::vector<Var *> LICMPass::getUsedVars(Value *expr) {
+//   std::vector<Var *> used;
   
-  class UsedVarsVisitor : public util::Visitor {
-  private:
-    std::vector<Var *> &vars;
-    std::unordered_set<Var *> seen;
+//   class UsedVarsVisitor : public util::Visitor {
+//   private:
+//     std::vector<Var *> &vars;
+//     std::unordered_set<Var *> seen;
     
-  public:
-    UsedVarsVisitor(std::vector<Var *> &vars) : vars(vars) {}
+//   public:
+//     UsedVarsVisitor(std::vector<Var *> &vars) : vars(vars) {}
     
-    void visit(VarValue *v) override {
-      auto *var = v->getVar();
-      if (seen.insert(var).second)
-        vars.push_back(var);
-    }
-  };
+//     void visit(VarValue *v) override {
+//       auto *var = v->getVar();
+//       if (seen.insert(var).second)
+//         vars.push_back(var);
+//     }
+//   };
   
-  UsedVarsVisitor visitor(used);
-  visitor.process(expr);
+//   UsedVarsVisitor visitor(used);
+//   visitor.visit(expr);
   
-  return used;
-}
-
-
+//   return used;
+// }
 
 } // namespace optimizations
 } // namespace transform
