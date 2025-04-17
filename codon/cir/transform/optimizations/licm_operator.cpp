@@ -176,8 +176,7 @@ std::unordered_set<Var *> LICMPass::collectModifiedVars(T *loop) {
         }
       }
     }
-        
-    // Add other operations that might modify variables
+      
   };
   
   ModifiedVarsVisitor visitor(modified);
@@ -186,29 +185,6 @@ std::unordered_set<Var *> LICMPass::collectModifiedVars(T *loop) {
   return modified;
 }
 
-// std::vector<Var *> LICMPass::getUsedVars(Value *expr) {
-//   std::vector<Var *> used;
-  
-//   class UsedVarsVisitor : public util::Visitor {
-//   private:
-//     std::vector<Var *> &vars;
-//     std::unordered_set<Var *> seen;
-    
-//   public:
-//     UsedVarsVisitor(std::vector<Var *> &vars) : vars(vars) {}
-    
-//     void visit(VarValue *v) override {
-//       auto *var = v->getVar();
-//       if (seen.insert(var).second)
-//         vars.push_back(var);
-//     }
-//   };
-  
-//   UsedVarsVisitor visitor(used);
-//   visitor.visit(expr);
-  
-//   return used;
-// }
 
 } // namespace optimizations
 } // namespace transform

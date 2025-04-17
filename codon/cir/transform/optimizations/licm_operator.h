@@ -50,12 +50,7 @@ class LICMPass : public OperatorPass {
         /// @param loop the loop to analyze
         /// @return set of variables modified in the loop
         template <typename T>
-        std::unordered_set<Var *> collectModifiedVars(T *loop);
-        
-        // /// Identifies variables used in an expression
-        // /// @param expr the expression to analyze
-        // /// @return vector of used variables
-        // std::vector<Var *> getUsedVars(Value *expr);       
+        std::unordered_set<Var *> collectModifiedVars(T *loop);     
     };
 
 } // namespace optimizations

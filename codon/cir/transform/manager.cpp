@@ -23,6 +23,7 @@
 #include "codon/cir/transform/pythonic/io.h"
 #include "codon/cir/transform/pythonic/list.h"
 #include "codon/cir/transform/pythonic/str.h"
+#include "codon/cir/transform/optimizations/licm_operator.h"
 #include "codon/util/common.h"
 
 namespace codon {
@@ -207,7 +208,7 @@ void PassManager::registerStandardPasses(PassManager::Init init) {
 
     // optimizations
     registerPass(std::make_unique<optimizations::LICMPass>(seKey1), 
-                /*insertBefore=*/"", {seKey1}, {seKey1, rdKey, cfgKey, globalKey, capKey}); // {requires}, {invalidates}
+                  /*insertBefore=*/"", {seKey1}, {seKey1, rdKey, cfgKey, globalKey, capKey}); // {requires}, {invalidates}
 
     if (init != Init::JIT) {
       // Don't demote globals in JIT mode, since they might be used later
